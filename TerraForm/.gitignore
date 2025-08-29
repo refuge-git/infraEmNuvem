@@ -1,0 +1,33 @@
+# Arquivos de estado do Terraform (não versionar!)
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# Diretório interno do Terraform
+.terraform/
+.terraform.lock.hcl
+
+# Arquivos de override locais
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Variáveis sensíveis
+terraform.tfvars
+*.auto.tfvars
+
+# Chaves privadas e credenciais
+*.pem
+*.key
+*.crt
+*.p12
+
+# Backups
+*.bak
+*.backup
+
+# Arquivos do sistema
+.DS_Store
+Thumbs.db
