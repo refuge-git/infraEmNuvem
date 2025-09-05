@@ -13,6 +13,11 @@ provider "aws" {
   region = "us-east-1"
 }
 
+# -----------------------------------------------------------------------
+
+# MODULOS
+
+
 
 
 # 1. Configura uma VPC com CIDR 10.0.0.0/24
@@ -77,53 +82,53 @@ provider "aws" {
 #   }
 # }
 
-# 6. Associa a Route Table à sub-rede pública
-resource "aws_route_table_association" "subrede_publica" {
-  subnet_id = aws_subnet.subnet_publica.id
-  route_table_id = aws_route_table.route_table_publica.id
-}
+# # 6. Associa a Route Table à sub-rede pública
+# resource "aws_route_table_association" "subrede_publica" {
+#   subnet_id = aws_subnet.subnet_publica.id
+#   route_table_id = aws_route_table.route_table_publica.id
+# }
 
-# 7. Security Group para a instância pública
-resource "aws_security_group" "sg_publica" {
-  name = "sg_publica"
-  description = "Permite acesso SSH de qualquer IP"
-  vpc_id = aws_vpc.vpc_cco.id
+# # 7. Security Group para a instância pública
+# resource "aws_security_group" "sg_publica" {
+#   name = "sg_publica"
+#   description = "Permite acesso SSH de qualquer IP"
+#   vpc_id = aws_vpc.vpc_cco.id
 
-  ingress {
-    from_port = 22
-    to_port = 22
-    protocol = "tcp"
-    cidr_blocks = [var.cidr_qualquer_ip]
-  }
+#   ingress {
+#     from_port = 22
+#     to_port = 22
+#     protocol = "tcp"
+#     cidr_blocks = [var.cidr_qualquer_ip]
+#   }
 
-  egress {
-    from_port = 0
-    to_port = 0
-    protocol = 0
-    cidr_blocks = [var.cidr_qualquer_ip]
-  }
-}
+#   egress {
+#     from_port = 0
+#     to_port = 0
+#     protocol = 0
+#     cidr_blocks = [var.cidr_qualquer_ip]
+#   }
+# }
 
-# 8. Security Group para a instância privada
-resource "aws_security_group" "sg_privada" {
-  name = "sg_privada"
-  description = "Permite acesso SSH apenas da mesma VPC"
-  vpc_id = aws_vpc.vpc_cco.id
+# # 8. Security Group para a instância privada
+# resource "aws_security_group" "sg_privada" {
+#   name = "sg_privada"
+#   description = "Permite acesso SSH apenas da mesma VPC"
+#   vpc_id = aws_vpc.vpc_cco.id
 
-  ingress {
-    from_port = 22
-    to_port = 22
-    protocol = "tcp"
-    cidr_blocks = [aws_vpc.vpc_cco.cidr_block]
-  }
+#   ingress {
+#     from_port = 22
+#     to_port = 22
+#     protocol = "tcp"
+#     cidr_blocks = [aws_vpc.vpc_cco.cidr_block]
+#   }
 
-  egress {
-    from_port = 0
-    to_port = 0
-    protocol = "-1"
-    cidr_blocks = [var.cidr_qualquer_ip]
-  }
-}
+#   egress {
+#     from_port = 0
+#     to_port = 0
+#     protocol = "-1"
+#     cidr_blocks = [var.cidr_qualquer_ip]
+#   }
+# }
 
 # 9. Instância EC2 pública
 # resource "aws_instance" "ec2_publica_front1" {

@@ -71,3 +71,9 @@ resource "aws_route_table" "route_table_publica" {
 # cONFIGURAÇÃO DA ROUTE TABLE PRIVADA
 
 # -----------------------------------------------------------------------
+
+# 6. Associa a Route Table à sub-rede pública
+resource "aws_route_table_association" "subrede_publica" {
+  subnet_id = aws_subnet.subnet_publica.id
+  route_table_id = aws_route_table.route_table_publica.id
+}
