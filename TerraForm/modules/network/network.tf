@@ -3,9 +3,9 @@
 # CONFIGURAÇÃO DA VPC
 
 resource "aws_vpc" "vpc_cco" {
-  cidr_block = "10.0.0.0/26"
+  cidr_block = var.vpc_cidr
   tags = {
-    Name = "vpc-2cco"
+    Name = var.vpc_name
   }
 }
 # -----------------------------------------------------------------------
@@ -14,17 +14,17 @@ resource "aws_vpc" "vpc_cco" {
 
 resource "aws_subnet" "subnet_publica" {
   vpc_id = aws_vpc.vpc_cco.id
-  cidr_block = "10.0.0.0/28"
+  cidr_block = var.subnet_publica_cidrs
   tags = {
-    Name = "subrede-publica"
+    Name = var.subnet_publica_name
   }
 }
 
 resource "aws_subnet" "subnet_privada" {
   vpc_id = aws_vpc.vpc_cco.id
-  cidr_block = "10.0.0.16/28"
+  cidr_block = var.subnet_privada_cidrs
   tags = {
-    Name = "subrede-privada"
+    Name = var.subnet_privada_name
   }
 }
 
@@ -50,7 +50,7 @@ resource "aws_subnet" "subnet_privada" {
 resource "aws_internet_gateway" "igw_cco" {
   vpc_id = aws_vpc.vpc_cco.id
   tags = {
-    Name = "cco-igw"
+    Name = var.igw_name
   }
 }
 # -----------------------------------------------------------------------
@@ -64,7 +64,7 @@ resource "aws_route_table" "route_table_publica" {
     gateway_id = aws_internet_gateway.igw_cco.id
   }
   tags = {
-    Name = "subrede-publica-route-table"
+    Name = var.route_table_publica_name
   }
 }
 
