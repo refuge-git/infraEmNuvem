@@ -5,6 +5,20 @@ variable "cidr_qualquer_ip" {
 }
 
 # -----------------------------------------------------------------------
+# Variáveis para integração com a VPC
+# -----------------------------------------------------------------------
+
+variable "vpc_id" {
+  description = "ID da VPC onde os security groups serão criados"
+  type        = string
+}
+
+variable "vpc_cidr" {
+  description = "CIDR da VPC (para regras de acesso interno)"
+  type        = string
+}
+
+# -----------------------------------------------------------------------
 
 variable "sg_publica_name" {
   default = "sg_publica"
@@ -39,7 +53,14 @@ variable "sg_egress_protocol" {
   default = 0
 }
 
-variable "sg_egress_protocol" {
-  default = "-1"
+# variable "sg_egress_protocol1" {
+#   default = "-1"
+# }
+
+variable "sg_egress_protocol_priv" {
+  description = "Protocolo de egress para a SG privada"
+  type        = string
+  default     = "-1"
 }
+
 
