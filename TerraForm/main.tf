@@ -32,3 +32,16 @@ module "instances" {
   sg_publica_id     = module.security.sg_publica_id
   sg_privada_id     = module.security.sg_privada_id
 }
+
+module "s3" {
+  source      = "./modules/s3"
+  bucket_name = "s3-refuge-achiropita"
+}
+
+module "alb" {
+  source             = "./modules/alb"
+  vpc_id             = module.network.vpc_id
+  subnet_ids = [module.network.public_subnet_ids[0], module.network.private_subnet_ids[0]]
+  ec2_instance_1_id  = module.instances.ec2_privada_back1_id
+  ec2_instance_2_id  = module.instances.ec2_privada_back2_id
+}
