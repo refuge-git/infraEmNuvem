@@ -17,7 +17,8 @@
 variable "id_ami" {
   description = "AMI usada para as instâncias"
   type        = string
-  default     = "ami-0e86e20dae9224db8"
+  # default     = "ami-0e86e20dae9224db8"
+  default = "ami-00ca32bbc84273381"
 }
 
 # -----------------------------------------------------------------------
@@ -51,8 +52,15 @@ variable "sg_publica_id" {
   type        = string
 }
 
+
 variable "subnet_publica_id" {
   description = "ID da Subnet pública"
+  type        = string
+}
+
+# Par de chaves SSH
+variable "key_name" {
+  description = "Nome do par de chaves para acesso SSH"
   type        = string
 }
 

@@ -11,13 +11,29 @@ resource "aws_security_group" "sg_publica" {
     from_port = var.ssh_port
     to_port = var.ssh_port
     protocol = var.sg_ingress_protocol
-    cidr_blocks = [var.vpc_cidr]
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "RabbitMQ AMQP"
+    from_port = 5672
+    to_port = 5672
+    protocol = "tcp"
+    cidr_blocks = [var.cidr_qualquer_ip]
+  }
+
+  ingress {
+    description = "RabbitMQ UI"
+    from_port = 15672
+    to_port = 15672
+    protocol = "tcp"
+    cidr_blocks = [var.cidr_qualquer_ip]
   }
 
   egress {
     from_port = 0
     to_port = 0
-    protocol = var.sg_egress_protocol
+    protocol = "-1"
     cidr_blocks = [var.vpc_cidr]
   }
 }
@@ -35,7 +51,7 @@ resource "aws_security_group" "sg_privada" {
     from_port = var.ssh_port
     to_port = var.ssh_port
     protocol = var.sg_ingress_protocol
-    cidr_blocks = [var.vpc_cidr]
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {

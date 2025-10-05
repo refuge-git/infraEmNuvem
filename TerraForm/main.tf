@@ -31,6 +31,7 @@ module "instances" {
   subnet_privada_id = module.network.private_subnet_ids[0]
   sg_publica_id     = module.security.sg_publica_id
   sg_privada_id     = module.security.sg_privada_id
+  key_name          = "vockey"
 }
 
 module "s3" {
