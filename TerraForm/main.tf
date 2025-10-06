@@ -46,3 +46,12 @@ module "alb" {
   ec2_instance_1_id  = module.instances.ec2_privada_back1_id
   ec2_instance_2_id  = module.instances.ec2_privada_back2_id
 }
+
+module "lambda" {
+  source = "./modules/lambda"
+
+  lambda_function_name = "funcao1_terraform"
+  lambda_handler       = "lambda_function.lambda_handler"
+  lambda_runtime       = "python3.9"
+  lambda_role_name     = "LabRole"
+}
