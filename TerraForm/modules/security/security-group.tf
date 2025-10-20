@@ -64,3 +64,29 @@ resource "aws_security_group" "sg_privada" {
 
 # -----------------------------------------------------------------------
 
+# SECURITY GROUP PARA INSTANCIA MYSQL
+resource "aws_security_group" "sg_mysql" {
+  name        = "sg_mysql"
+  description = "Permite acesso MySQL e SSH"
+  vpc_id      = aws_vpc.vpc_cco.id
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
+    from_port   = 3306
+    to_port     = 3306
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] 
+  }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
