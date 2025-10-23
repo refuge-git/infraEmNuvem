@@ -1,16 +1,15 @@
 #!/bin/bash
 
-# instalar o pacotes zip, necessário para instalar o sdkman
-sudo apt-get update
-sudo apt-get install zip -y
-echo "Pacote zip instalado com sucesso!"
+# criando o diretório de html
+# ATENÇÃO! se o usuário da EC2 for ubuntu, trocar ec2-user por ubuntu
 
-# Instala o SDKMAN como usuário 'ubuntu' (se não for esse seu usuário, troque no script) 
-# e configura o ambiente na sessão atual
-sudo su - ubuntu -c '
-    echo "Iniciando a instalação do SDKMAN e Java 21 para o usuário ubuntu..."
-    curl -s "https://get.sdkman.io" | bash
-    source "$HOME/.sdkman/bin/sdkman-init.sh"
-    sdk install java 21.0.8-amzn
-    echo "Instalação do SDKMAN e Java 21 feita! Toma!"
-'
+sudo mkdir /home/ec2-user/backend
+sudo mkdir /usr/share/api
+sudo chown ec2-user:ec2-user /usr/share/api
+echo "Diretório /usr/share/api criado com sucesso."
+
+# Decodifica e salva o YAML
+echo "${arquivo_docker_compose}" | base64 -d > /home/ec2-user/compose.yaml
+
+sudo docker compose -f /home/ec2-user/compose.yaml up -d
+echo "API iniciada com sucesso."

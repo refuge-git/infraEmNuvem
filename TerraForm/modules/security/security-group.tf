@@ -14,6 +14,13 @@ resource "aws_security_group" "sg_publica" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+   ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   ingress {
     description = "RabbitMQ AMQP"
     from_port = 5672
@@ -34,7 +41,7 @@ resource "aws_security_group" "sg_publica" {
     from_port = 0
     to_port = 0
     protocol = "-1"
-    cidr_blocks = [var.vpc_cidr]
+    cidr_blocks = [var.cidr_qualquer_ip]
   }
 }
 
@@ -51,42 +58,26 @@ resource "aws_security_group" "sg_privada" {
     from_port = var.ssh_port
     to_port = var.ssh_port
     protocol = var.sg_ingress_protocol
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["10.0.0.0/16"]
+  }
+
+  ingress { # porta 8080 p/ spring boot
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.0.0/24"]
   }
 
   egress {
     from_port = 0
     to_port = 0
     protocol = var.sg_egress_protocol_priv
-    cidr_blocks = [var.vpc_cidr]
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
 # -----------------------------------------------------------------------
 
 # SECURITY GROUP PARA INSTANCIA MYSQL
-resource "aws_security_group" "sg_mysql" {
-  name        = "sg_mysql"
-  description = "Permite acesso MySQL e SSH"
-  vpc_id      = aws_vpc.vpc_cco.id
 
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  ingress {
-    from_port   = 3306
-    to_port     = 3306
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] 
-  }
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
 
