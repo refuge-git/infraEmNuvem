@@ -39,6 +39,64 @@ module "s3" {
   bucket_name = "s3-refuge-achiropita"
 }
 
+
+
+# Bucket RAW (upload público para Lambda)
+resource "aws_s3_bucket" "raw" {
+  bucket = "bucket-refuge-img-raw"
+  acl    = "private"
+
+  tags = {
+    Name = "Bucket RAW"
+  }
+}
+
+# Permissão pública para upload no RAW
+resource "aws_s3_bucket_policy" "raw_public_write" {
+  bucket = aws_s3_bucket.raw.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "PublicUpload"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = ["s3:PutObject"]
+        Resource  = "arn:aws:s3:::${aws_s3_bucket.raw.bucket}/*"
+      }
+    ]
+  })
+}
+
+# Bucket TRUSTED (leitura pública)
+resource "aws_s3_bucket" "trusted" {
+  bucket = "bucket-refuge-img-trusted"
+  acl    = "private"
+
+  tags = {
+    Name = "Bucket TRUSTED"
+  }
+}
+
+# Permissão pública para leitura no TRUSTED
+resource "aws_s3_bucket_policy" "trusted_public_read" {
+  bucket = aws_s3_bucket.trusted.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "PublicReadGetObject"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = ["s3:GetObject"]
+        Resource  = "arn:aws:s3:::${aws_s3_bucket.trusted.bucket}/*"
+      }
+    ]
+  })
+}
+
+
+
 module "alb" {
   source             = "./modules/alb"
   vpc_id             = module.network.vpc_id
@@ -47,13 +105,47 @@ module "alb" {
   ec2_instance_2_id  = module.instances.ec2_privada_back2_id
 }
 
+
+
 module "lambda" {
   source = "./modules/lambda"
 
   lambda_function_name = "funcao1_terraform"
   lambda_handler       = "lambda_function.lambda_handler"
-  lambda_runtime       = "python3.9"
+  lambda_runtime       = "python3.11"
   lambda_role_name     = "LabRole"
+
+  lambda_layers = [aws_lambda_layer_version.pillow.arn]
+}
+
+# Layer do Pillow para imports do python da lambda
+resource "aws_lambda_layer_version" "pillow" {
+  layer_name          = "pillow-layer"
+  description         = "Pillow 10.2.0 para Python 3.11"
+  compatible_runtimes = ["python3.11"]
+  filename = "../lambda/layers/pillow/pillow-layer.zip"
+}
+
+# Trigger para a lambda invocar o S3
+# Permissão para o S3 invocar a Lambda
+resource "aws_lambda_permission" "allow_s3_raw" {
+  statement_id  = "AllowS3InvokeLambda"
+  action        = "lambda:InvokeFunction"
+  function_name = module.lambda.lambda_function_name
+  principal     = "s3.amazonaws.com"
+  source_arn    = aws_s3_bucket.raw.arn
+}
+
+# Notificação do bucket RAW para a Lambda
+resource "aws_s3_bucket_notification" "raw_bucket_trigger" {
+  bucket = aws_s3_bucket.raw.id
+
+  lambda_function {
+    lambda_function_arn = module.lambda.lambda_function_arn
+    events              = ["s3:ObjectCreated:*"]
+  }
+
+  depends_on = [aws_lambda_permission.allow_s3_raw]
 }
 
 
