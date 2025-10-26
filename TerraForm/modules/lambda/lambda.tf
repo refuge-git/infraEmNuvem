@@ -20,9 +20,3 @@ resource "aws_lambda_function" "this" {
   source_code_hash = data.archive_file.lambda_zip.output_base64sha256
   layers = var.lambda_layers
 }
-
-
-# Output no módulo Lambda (caso ainda não exista)
-output "lambda_function_arn" {
-  value = aws_lambda_function.this.arn
-}

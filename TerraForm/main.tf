@@ -51,6 +51,15 @@ resource "aws_s3_bucket" "raw" {
   }
 }
 
+resource "aws_s3_bucket_public_access_block" "raw_public_access" {
+  bucket = aws_s3_bucket.raw.id
+
+  block_public_acls       = false
+  ignore_public_acls      = false
+  block_public_policy     = false
+  restrict_public_buckets = false
+}
+
 # Permissão pública para upload no RAW
 resource "aws_s3_bucket_policy" "raw_public_write" {
   bucket = aws_s3_bucket.raw.id
@@ -76,6 +85,15 @@ resource "aws_s3_bucket" "trusted" {
   tags = {
     Name = "Bucket TRUSTED"
   }
+}
+
+resource "aws_s3_bucket_public_access_block" "trusted_public_access" {
+  bucket = aws_s3_bucket.trusted.id
+
+  block_public_acls       = false
+  ignore_public_acls      = false
+  block_public_policy     = false
+  restrict_public_buckets = false
 }
 
 # Permissão pública para leitura no TRUSTED
