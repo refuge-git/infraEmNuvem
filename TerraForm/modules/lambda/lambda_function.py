@@ -16,9 +16,16 @@ def lambda_handler(event, context):
 
         print(f"🔹 Iniciando processamento da imagem: {key} do bucket {source_bucket}")
 
-        # Ignora se já for JPG ou JPEG
+        # Se for JPG ou JPEG, apenas copia para o bucket trusted (sem reconverter)
         if key.lower().endswith(('.jpg', '.jpeg')):
-            print(f"🟡 Ignorado: {key} já está em formato JPG.")
+            print(f"📤 Arquivo {key} já é JPG. Enviando cópia direta para {DEST_BUCKET}...")
+            s3.copy_object(
+                Bucket=DEST_BUCKET,
+                CopySource={'Bucket': source_bucket, 'Key': key},
+                Key=key,
+                ContentType='image/jpeg'
+            )
+            print(f"✅ Cópia concluída: {DEST_BUCKET}/{key}")
             return
 
         # Baixa a imagem original do bucket raw
