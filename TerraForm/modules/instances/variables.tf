@@ -64,3 +64,8 @@ variable "key_name" {
   type        = string
 }
 
+variable "private_key_path" {
+  description = "Caminho para a chave privada para acesso SSH"
+  type        = string
+}
+

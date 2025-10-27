@@ -3,7 +3,7 @@
 
 resource "aws_instance" "ec2_publica_front1" {
   ami                         = var.id_ami
-  instance_type                = var.instancia_type_front
+  instance_type                = "t3.medium"
   key_name                     = var.key_name
   associate_public_ip_address  = true
   vpc_security_group_ids       = [var.sg_publica_id]

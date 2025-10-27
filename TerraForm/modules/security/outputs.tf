@@ -20,4 +20,9 @@ output "sg_privada_name" {
   value = aws_security_group.sg_privada.name
 }
 
+variable "alb_sg_id" {
+  description = "ID do security group do ALB"
+  type        = string
+}
+
 # -----------------------------------------------------------------------

@@ -91,7 +91,7 @@ resource "aws_subnet" "subnet_publica1" {
 
 resource "aws_subnet" "subnet_privada1" {
   vpc_id = aws_vpc.main.id
-  availability_zone = "us-east-1b"
+  availability_zone = "us-east-1a"
   cidr_block = var.subnet_privada_cidrs[0]
   map_public_ip_on_launch = false
   tags = {
@@ -101,7 +101,7 @@ resource "aws_subnet" "subnet_privada1" {
 
 resource "aws_subnet" "subnet_publica2" {
   vpc_id = aws_vpc.main.id
-  availability_zone = "us-east-1c"
+  availability_zone = "us-east-1b"
   cidr_block = var.subnet_publica_cidrs[1]
   map_public_ip_on_launch = true
   tags = {
@@ -111,7 +111,7 @@ resource "aws_subnet" "subnet_publica2" {
 
 resource "aws_subnet" "subnet_privada2" {
   vpc_id = aws_vpc.main.id
-  availability_zone = "us-east-1d"
+  availability_zone = "us-east-1b"
   cidr_block = var.subnet_privada_cidrs[1]
   map_public_ip_on_launch = false
   tags = {

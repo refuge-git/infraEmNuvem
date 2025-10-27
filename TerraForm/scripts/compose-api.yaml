@@ -1,13 +1,38 @@
-services:
-  api:
-    image: amazoncorretto:21  # Imagem Java 21 da Amazon
-    container_name: api-spring  # Nome fixo do container (opcional)
-    command: sh -c "mkdir -p /usr/share/api && java -jar /usr/share/api/app_loko.jar"  # Cria pasta se não existir e roda o JAR
-    volumes: # Mapeamentos: host → container
-      - /usr/share/api:/usr/share/api  
-    ports:
-      - "8080:8080"  # Exemplo: expondo uma porta (ajuste se o app usar outra em caso de réplica na mesma instância EC2)
+version: '3.8'
 
-# DICA: para ver os logs de execução da API, use o comando:
-# docker compose logs -f api      
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: refuge
+      MYSQL_USER: user
+      MYSQL_PASSWORD: userpassword
+      MYSQL_ROOT_HOST: '%'
+    ports:
+      - 3306:3306
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  api:
+    build: .
+    container_name: api-spring
+    depends_on:
+      - mysql
+    ports:
+      - 8080:8080
+    environment:
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: rootpassword
+    command: ./wait-for-mysql.sh mysql java -jar /usr/share/api/app_loko.jar
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
 

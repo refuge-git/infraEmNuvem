@@ -7,7 +7,7 @@ resource "aws_security_group" "sg_publica" {
   description = var.sg_publica_desc
   vpc_id = var.vpc_id
 
-  ingress {
+   ingress {
     from_port = var.ssh_port
     to_port = var.ssh_port
     protocol = var.sg_ingress_protocol
@@ -47,6 +47,8 @@ resource "aws_security_group" "sg_publica" {
 
 # -----------------------------------------------------------------------
 
+
+
 # SECURITY GROUP PARA INSTANCIA PRIVADA
 
 resource "aws_security_group" "sg_privada" {
@@ -58,14 +60,15 @@ resource "aws_security_group" "sg_privada" {
     from_port = var.ssh_port
     to_port = var.ssh_port
     protocol = var.sg_ingress_protocol
-    cidr_blocks = ["10.0.0.0/16"]
+    cidr_blocks = [var.vpc_cidr]
   }
 
-  ingress { # porta 8080 p/ spring boot
-    from_port   = 8080
-    to_port     = 8080
-    protocol    = "tcp"
-    cidr_blocks = ["10.0.0.0/24"]
+  ingress {
+  description      = "Permite trafego HTTP do ALB e do Frontend"
+  from_port        = 8080
+  to_port          = 8080
+  protocol         = "tcp"
+  security_groups  = [var.alb_sg_id, aws_security_group.sg_publica.id]
   }
 
   egress {

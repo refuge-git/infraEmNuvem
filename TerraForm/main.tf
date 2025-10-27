@@ -21,7 +21,8 @@ module "network" {
 module "security" {
   source   = "./modules/security"
   vpc_id   = module.network.vpc_id
-  vpc_cidr = "10.0.0.0/24"
+  vpc_cidr = "10.0.0.0/16"
+  alb_sg_id = aws_security_group.alb_sg.id
 }
 
 # Módulo de instâncias
@@ -32,12 +33,89 @@ module "instances" {
   sg_publica_id     = module.security.sg_publica_id
   sg_privada_id     = module.security.sg_privada_id
   key_name          = "vockey"
+  private_key_path  = "./modules/instances/labsuser.pem"
 }
 
 module "s3" {
   source      = "./modules/s3"
   bucket_name = "s3-refuge-achiropita"
 }
+
+
+
+# Bucket RAW (upload público para Lambda)
+resource "aws_s3_bucket" "raw" {
+  bucket = "bucket-refuge-img-raw"
+  acl    = "private"
+
+  tags = {
+    Name = "Bucket RAW"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "raw_public_access" {
+  bucket = aws_s3_bucket.raw.id
+
+  block_public_acls       = false
+  ignore_public_acls      = false
+  block_public_policy     = false
+  restrict_public_buckets = false
+}
+
+# Permissão pública para upload no RAW
+resource "aws_s3_bucket_policy" "raw_public_write" {
+  bucket = aws_s3_bucket.raw.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "PublicUpload"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = ["s3:PutObject"]
+        Resource  = "arn:aws:s3:::${aws_s3_bucket.raw.bucket}/*"
+      }
+    ]
+  })
+}
+
+# Bucket TRUSTED (leitura pública)
+resource "aws_s3_bucket" "trusted" {
+  bucket = "bucket-refuge-img-trusted"
+  acl    = "private"
+
+  tags = {
+    Name = "Bucket TRUSTED"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "trusted_public_access" {
+  bucket = aws_s3_bucket.trusted.id
+
+  block_public_acls       = false
+  ignore_public_acls      = false
+  block_public_policy     = false
+  restrict_public_buckets = false
+}
+
+# Permissão pública para leitura no TRUSTED
+resource "aws_s3_bucket_policy" "trusted_public_read" {
+  bucket = aws_s3_bucket.trusted.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "PublicReadGetObject"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = ["s3:GetObject"]
+        Resource  = "arn:aws:s3:::${aws_s3_bucket.trusted.bucket}/*"
+      }
+    ]
+  })
+}
+
+
 
 module "alb" {
   source             = "./modules/alb"
@@ -47,13 +125,47 @@ module "alb" {
   ec2_instance_2_id  = module.instances.ec2_privada_back2_id
 }
 
+
+
 module "lambda" {
   source = "./modules/lambda"
 
   lambda_function_name = "funcao1_terraform"
   lambda_handler       = "lambda_function.lambda_handler"
-  lambda_runtime       = "python3.9"
+  lambda_runtime       = "python3.11"
   lambda_role_name     = "LabRole"
+
+  lambda_layers = [aws_lambda_layer_version.pillow.arn]
+}
+
+# Layer do Pillow para imports do python da lambda
+resource "aws_lambda_layer_version" "pillow" {
+  layer_name          = "pillow-layer"
+  description         = "Pillow 10.2.0 para Python 3.11"
+  compatible_runtimes = ["python3.11"]
+  filename = "../lambda/layers/pillow/pillow-layer.zip"
+}
+
+# Trigger para a lambda invocar o S3
+# Permissão para o S3 invocar a Lambda
+resource "aws_lambda_permission" "allow_s3_raw" {
+  statement_id  = "AllowS3InvokeLambda"
+  action        = "lambda:InvokeFunction"
+  function_name = module.lambda.lambda_function_name
+  principal     = "s3.amazonaws.com"
+  source_arn    = aws_s3_bucket.raw.arn
+}
+
+# Notificação do bucket RAW para a Lambda
+resource "aws_s3_bucket_notification" "raw_bucket_trigger" {
+  bucket = aws_s3_bucket.raw.id
+
+  lambda_function {
+    lambda_function_arn = module.lambda.lambda_function_arn
+    events              = ["s3:ObjectCreated:*"]
+  }
+
+  depends_on = [aws_lambda_permission.allow_s3_raw]
 }
 
 
@@ -210,3 +322,127 @@ output "url_gerenciador_rabbitmq" {
 #     Name = "ec2-publica-mysql"
 #   }
 # }
+
+
+# module "alb" {
+#   source             = "./modules/alb"
+#   vpc_id             = module.network.vpc_id
+#   subnet_ids = [module.network.public_subnet_ids[0], module.network.private_subnet_ids[0]]
+#   ec2_instance_1_id  = module.instances.ec2_privada_back1_id
+#   ec2_instance_2_id  = module.instances.ec2_privada_back2_id
+# }
+
+
+# =====================================================
+resource "aws_security_group" "alb_sg" {
+  name        = "alb-sg-web-access"
+  description = "Permite acesso HTTP publico ao ALB"
+  vpc_id      = module.network.vpc_id
+
+  # Entrada HTTP pública (porta 80)
+  ingress {
+    description = "Chamadas HTTP da internet"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Saída liberada para qualquer destino
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "alb-sg-web-access"
+  }
+}
+
+resource "aws_security_group" "backend_sg" {
+  name        = "backend-sg"
+  description = "Permite trafego do ALB para o backend"
+  vpc_id      = module.network.vpc_id
+
+  ingress {
+    description      = "Permite trafego HTTP do ALB"
+    from_port        = 8080
+    to_port          = 8080
+    protocol         = "tcp"
+    security_groups  = [aws_security_group.alb_sg.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "backend-sg"
+  }
+}
+
+
+resource "aws_lb_target_group" "web_tg" {
+  name        = "web-target-group-app"
+  port        = 8080
+  protocol    = "HTTP"
+  vpc_id      = module.network.vpc_id
+  target_type = "instance"
+
+  # Health check para validar o backend
+  health_check {
+    path                = "/actuator/health" # ajuste conforme sua API
+    protocol            = "HTTP"
+    matcher             = "200"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 3
+    unhealthy_threshold = 2
+  }
+
+  tags = {
+    Name = "web-tg-backend"
+  }
+}
+
+
+resource "aws_lb" "alb_principal" {
+  name               = "alb-principal"
+  internal           = false                   # público
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.alb_sg.id]
+  subnets            = [                      # SOMENTE SUBNETS PÚBLICAS
+    module.network.public_subnet_ids[0],
+    module.network.public_subnet_ids[1]
+  ]
+
+  tags = {
+    Name = "ALBPrincipal"
+  }
+}
+
+resource "aws_lb_listener" "http_listener" {
+  load_balancer_arn = aws_lb.alb_principal.arn
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.web_tg.arn
+  }
+}
+
+resource "aws_lb_target_group_attachment" "backend_attach" {
+  target_group_arn = aws_lb_target_group.web_tg.arn
+  target_id        = module.instances.ec2_privada_back1_id  # EC2 do backend
+  port             = 8080                                     # Porta do backend
+}
+
+output "alb_dns_name" {
+  value = aws_lb.alb_principal.dns_name
+}
