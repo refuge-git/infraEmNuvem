@@ -18,4 +18,5 @@ resource "aws_lambda_function" "this" {
   role             = data.aws_iam_role.lab_role.arn
   filename         = data.archive_file.lambda_zip.output_path
   source_code_hash = data.archive_file.lambda_zip.output_base64sha256
+  layers = var.lambda_layers
 }
