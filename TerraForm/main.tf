@@ -117,13 +117,13 @@ resource "aws_s3_bucket_policy" "trusted_public_read" {
 
 
 
-module "alb" {
-  source             = "./modules/alb"
-  vpc_id             = module.network.vpc_id
-  subnet_ids = [module.network.public_subnet_ids[0], module.network.private_subnet_ids[0]]
-  ec2_instance_1_id  = module.instances.ec2_privada_back1_id
-  ec2_instance_2_id  = module.instances.ec2_privada_back2_id
-}
+# module "alb" {
+#   source             = "./modules/alb"
+#   vpc_id             = module.network.vpc_id
+#   subnet_ids = [module.network.public_subnet_ids[0], module.network.private_subnet_ids[0]]
+#   ec2_instance_1_id  = module.instances.ec2_privada_back1_id
+#   ec2_instance_2_id  = module.instances.ec2_privada_back2_id
+# }
 
 
 
