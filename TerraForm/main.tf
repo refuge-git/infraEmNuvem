@@ -446,3 +446,38 @@ resource "aws_lb_target_group_attachment" "backend_attach" {
 output "alb_dns_name" {
   value = aws_lb.alb_principal.dns_name
 }
+
+# Bucket de backup do banco de dados
+resource "aws_s3_bucket" "s3_backup" {
+  bucket = "refuge-backup-bd"
+
+  tags = {
+    Name = "Bucket de Backup"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "s3_backup_public_access" {
+  bucket = aws_s3_bucket.s3_backup.id
+
+  block_public_acls       = false
+  ignore_public_acls      = false
+  block_public_policy     = false
+  restrict_public_buckets = false
+}
+
+# Permissão pública para upload no Bucket de Backup
+resource "aws_s3_bucket_policy" "s3_backup_public_write" {
+  bucket = aws_s3_bucket.s3_backup.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "PublicUpload"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = ["s3:PutObject"]
+        Resource  = "arn:aws:s3:::${aws_s3_bucket.s3_backup.bucket}/*"
+      }
+    ]
+  })
+}

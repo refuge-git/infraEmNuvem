@@ -13,23 +13,35 @@ resource "aws_instance" "ec2_privada_back1" {
     #!/bin/bash
     set -e
 
-    # Atualiza e instala Docker
+    # === Atualiza e instala dependências ===
     dnf update -y
-    dnf install -y docker
+    dnf install -y docker python3-pip
+    pip3 install boto3 python-dotenv
+
+    # Habilita e inicia o Docker
     systemctl enable docker
     systemctl start docker
 
-    # Cria pasta da aplicação
+    # === Cria pasta da aplicação ===
     mkdir -p /home/ec2-user/backend
     cd /home/ec2-user/backend
 
-    # Copia arquivos necessários
+    # === Copia arquivos necessários ===
     echo "${base64decode(filebase64("./scripts/Dockerfile"))}" > Dockerfile
     echo "${base64decode(filebase64("./scripts/compose-api.yaml"))}" > docker-compose.yaml
 
-    # Build e start dos containers
+    # === Copia script de backup e .env ===
+    echo "${base64decode(filebase64("./scripts/backup-mysql.py"))}" > backup.py
+    echo "${base64decode(filebase64("./scripts/.env"))}" > .env
+    chmod +x backup.py
+
+    # === Build e start dos containers ===
     docker build -t api-spring .
     docker compose up -d
+
+    # === Cria cron job para backup diário às 3h ===
+    echo "0 3 * * * /usr/bin/python3 /home/ec2-user/backend/backup.py >> /var/log/backup.log 2>&1" >> /var/spool/cron/ec2-user
+    systemctl restart crond
   EOF
 
   user_data_replace_on_change = true

@@ -23,6 +23,7 @@ terraform.tfvars
 *.key
 *.crt
 *.p12
+.env
 
 # Backups
 *.bak
