@@ -1,38 +1,13 @@
-version: '3.8'
-
 services:
-  mysql:
-    image: mysql:8.0
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: refuge
-      MYSQL_USER: user
-      MYSQL_PASSWORD: userpassword
-      MYSQL_ROOT_HOST: '%'
-    ports:
-      - 3306:3306
-    volumes:
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-    restart: unless-stopped
-    networks:
-      - app-network
-
   api:
-    build: .
-    container_name: api-spring
-    depends_on:
-      - mysql
+    image: amazoncorretto:21  
+    container_name: api-spring  
+    command: sh -c "mkdir -p /usr/share/api && java -jar /usr/share/api/app_loko.jar"  
+    volumes: 
+      - /usr/share/api:/usr/share/api  
     ports:
-      - 8080:8080
-    environment:
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: rootpassword
-    command: ./wait-for-mysql.sh mysql java -jar /usr/share/api/app_loko.jar
-    networks:
-      - app-network
+      - "8080:8080"  
 
-networks:
-  app-network:
-    driver: bridge
-
+# DICA: para ver os logs de execução da API, use o comando:
+# docker compose logs -f api      
 

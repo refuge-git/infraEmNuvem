@@ -481,3 +481,68 @@ resource "aws_s3_bucket_policy" "s3_backup_public_write" {
     ]
   })
 }
+
+
+# Instância EC2 para o banco de dados MySQL
+resource "aws_security_group" "sg_mysql" {
+  name        = "sg_mysql"
+  description = "Permite acesso MySQL e SSH"
+  vpc_id      = module.network.vpc_id
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
+    from_port   = 3306
+    to_port     = 3306
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] # ajuste para maior segurança se necessário
+  }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_instance" "ec2_publica_mysql" {
+  ami                         = "ami-00ca32bbc84273381" # ajuste conforme necessário
+  instance_type               = "t2.micro"
+  key_name                    = "vockey"
+  subnet_id                   = module.network.public_subnet_ids[0]
+  vpc_security_group_ids      = [aws_security_group.sg_mysql.id]
+  associate_public_ip_address = true
+
+  user_data = join("\n\n", [
+    "#!/bin/bash",
+    file("./scripts/instalar_docker_amazon_linux.sh"),
+    "docker-compose -f /home/ec2-user/compose.yaml up -d"
+  ])
+
+  user_data_replace_on_change = true # para forçar atualização se o user_data mudar
+
+  connection {
+    type        = "ssh"
+    user        = "ec2-user"
+    private_key = file("./modules/instances/labsuser.pem")
+    host        = self.public_ip
+  }
+
+  provisioner "file" {
+    source      = "./scripts/compose-bd.yaml"
+    destination = "/home/ec2-user/compose.yaml"
+  }
+
+  provisioner "file" {
+    source      = "./scripts/init.sql"
+    destination = "/home/ec2-user/init.sql"
+  }
+
+  tags = {
+    Name = "ec2-publica-mysql"
+  }
+}
