@@ -2,12 +2,11 @@ services:
   api:
     image: amazoncorretto:21  
     container_name: api-spring  
-    command: sh -c "mkdir -p /usr/share/api && java -jar /usr/share/api/app_loko.jar"  
+    command: sh -c "mkdir -p /usr/share/api && java -jar /usr/share/api/app_refuge.jar"  
     volumes: 
       - /usr/share/api:/usr/share/api  
     ports:
       - "8080:8080"  
 
-# DICA: para ver os logs de execução da API, use o comando:
-# docker compose logs -f api      
+
 

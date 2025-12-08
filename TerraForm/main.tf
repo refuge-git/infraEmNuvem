@@ -34,6 +34,7 @@ module "instances" {
   sg_privada_id     = module.security.sg_privada_id
   key_name          = "vockey"
   private_key_path  = "./modules/instances/labsuser.pem"
+  depends_on = [aws_instance.ec2_publica_mysql]
 }
 
 module "s3" {
@@ -217,29 +218,41 @@ resource "aws_security_group" "rabbitmq_sg" {
 }
 
 
-# 15.2. Criando uma instância EC2 na sub-rede pública 
 resource "aws_instance" "ec2_publica_rabbitmq1" {
-  ami                         = "ami-00ca32bbc84273381" # usar o mesmo da outra Ec2 pública
-  instance_type               = "t2.micro" 
+  ami                         = "ami-00ca32bbc84273381"
+  instance_type               = "t2.micro"
   key_name                    = "vockey"
   subnet_id                   = module.network.public_subnet_ids[0]
-  vpc_security_group_ids = [aws_security_group.rabbitmq_sg.id]
+  vpc_security_group_ids      = [aws_security_group.rabbitmq_sg.id]
   associate_public_ip_address = true
 
   connection {
     type        = "ssh"
-    user        = "ec2-user" # Ou 'ubuntu', 'centos', dependendo da AMI que escolheu
-    private_key = file("./modules/instances/labsuser.pem") # Sempre colocar a chave .pem dentro de /instances
+    user        = "ec2-user"
+    private_key = file("./modules/instances/labsuser.pem")
     host        = self.public_ip
   }
 
   provisioner "file" {
-    source      = "scripts/compose-rabbitmq.yaml" # arquivo docker-compose para o RabbitMQ
+    source      = "scripts/compose-rabbitmq.yaml"
     destination = "/home/ec2-user/compose.yaml"
-    # OU destination = "/home/ubuntu/compose.yaml" # se for AMI Ubuntu
   }
 
-  user_data = file("./scripts/instalar_rabbitmq_amazon_linux.sh") # script para instalar o RabbitMQ
+  provisioner "file" {
+    source      = "scripts/consumidor.py"
+    destination = "/home/ec2-user/consumidor.py"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "sudo yum update -y",
+      "sudo yum install -y python3",
+      "pip3 install pika flask",
+      "nohup python3 /home/ec2-user/consumidor.py &"
+    ]
+  }
+
+  user_data = file("./scripts/instalar_rabbitmq_amazon_linux.sh")
 
   tags = {
     Name = "ec2-publica-rabbitmq"
@@ -258,82 +271,6 @@ output "url_gerenciador_rabbitmq" {
 }
 
 
-# Instância EC2 para o banco de dados MySQL
-
-# resource "aws_security_group" "sg_mysql" {
-#   name        = "sg_mysql"
-#   description = "Permite acesso MySQL e SSH"
-#   vpc_id      = module.network.vpc_id
-
-#   ingress {
-#     from_port   = 22
-#     to_port     = 22
-#     protocol    = "tcp"
-#     cidr_blocks = ["0.0.0.0/0"]
-#   }
-#   ingress {
-#     from_port   = 3306
-#     to_port     = 3306
-#     protocol    = "tcp"
-#     cidr_blocks = ["0.0.0.0/0"] 
-#   }
-#   egress {
-#     from_port   = 0
-#     to_port     = 0
-#     protocol    = "-1"
-#     cidr_blocks = ["0.0.0.0/0"]
-#   }
-# }
-
-# resource "aws_instance" "ec2_publica_mysql" {
-#   ami                         = "ami-00ca32bbc84273381"
-#   instance_type               = "t2.micro" 
-#   key_name                    = "vockey"
-#   subnet_id                   = module.network.private_subnet_ids[0]
-#   vpc_security_group_ids      = [aws_security_group.sg_mysql.id]
-#   associate_public_ip_address = true
-
-#   user_data = join("\n\n", [
-#     "#!/bin/bash",
-#     file("./scripts/instalar_docker_amazon_linux.sh"),
-#     "docker-compose -f /home/ec2-user/compose-bd.yaml up -d"
-#   ])
-
-#   user_data_replace_on_change = true # para forçar atualização se o user_data mudar
-
-#   connection {
-#     type        = "ssh"
-#     user        = "ec2-user"
-#     private_key = file("./modules/instances/labsuser.pem")
-#     host        = self.public_ip
-#   }
-
-#   provisioner "file" {
-#     source      = "./scripts/compose-bd.yaml"
-#     destination = "/home/ec2-user/compose-bd.yaml"
-#   }
-
-#   provisioner "file" {
-#     source      = "./scripts/init.sql"
-#     destination = "/home/ec2-user/init.sql"
-#   }
-
-#   tags = {
-#     Name = "ec2-publica-mysql"
-#   }
-# }
-
-
-# module "alb" {
-#   source             = "./modules/alb"
-#   vpc_id             = module.network.vpc_id
-#   subnet_ids = [module.network.public_subnet_ids[0], module.network.private_subnet_ids[0]]
-#   ec2_instance_1_id  = module.instances.ec2_privada_back1_id
-#   ec2_instance_2_id  = module.instances.ec2_privada_back2_id
-# }
-
-
-# =====================================================
 resource "aws_security_group" "alb_sg" {
   name        = "alb-sg-web-access"
   description = "Permite acesso HTTP publico ao ALB"
@@ -447,7 +384,6 @@ output "alb_dns_name" {
   value = aws_lb.alb_principal.dns_name
 }
 
-# Bucket de backup do banco de dados
 resource "aws_s3_bucket" "s3_backup" {
   bucket = "refuge-backup-bd"
 
@@ -465,7 +401,6 @@ resource "aws_s3_bucket_public_access_block" "s3_backup_public_access" {
   restrict_public_buckets = false
 }
 
-# Permissão pública para upload no Bucket de Backup
 resource "aws_s3_bucket_policy" "s3_backup_public_write" {
   bucket = aws_s3_bucket.s3_backup.id
   policy = jsonencode({
@@ -483,7 +418,7 @@ resource "aws_s3_bucket_policy" "s3_backup_public_write" {
 }
 
 
-# Instância EC2 para o banco de dados MySQL
+
 resource "aws_security_group" "sg_mysql" {
   name        = "sg_mysql"
   description = "Permite acesso MySQL e SSH"
@@ -499,7 +434,7 @@ resource "aws_security_group" "sg_mysql" {
     from_port   = 3306
     to_port     = 3306
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # ajuste para maior segurança se necessário
+    cidr_blocks = ["0.0.0.0/0"] 
   }
   egress {
     from_port   = 0
@@ -510,27 +445,12 @@ resource "aws_security_group" "sg_mysql" {
 }
 
 resource "aws_instance" "ec2_publica_mysql" {
-  ami                         = "ami-00ca32bbc84273381" # ajuste conforme necessário
+  ami                         = "ami-00ca32bbc84273381" 
   instance_type               = "t2.micro"
   key_name                    = "vockey"
   subnet_id                   = module.network.public_subnet_ids[0]
   vpc_security_group_ids      = [aws_security_group.sg_mysql.id]
   associate_public_ip_address = true
-
-  user_data = join("\n\n", [
-    "#!/bin/bash",
-    file("./scripts/instalar_docker_amazon_linux.sh"),
-    "docker-compose -f /home/ec2-user/compose.yaml up -d"
-  ])
-
-  user_data_replace_on_change = true # para forçar atualização se o user_data mudar
-
-  connection {
-    type        = "ssh"
-    user        = "ec2-user"
-    private_key = file("./modules/instances/labsuser.pem")
-    host        = self.public_ip
-  }
 
   provisioner "file" {
     source      = "./scripts/compose-bd.yaml"
@@ -540,6 +460,29 @@ resource "aws_instance" "ec2_publica_mysql" {
   provisioner "file" {
     source      = "./scripts/init.sql"
     destination = "/home/ec2-user/init.sql"
+  }
+
+  provisioner "file" {
+    source      = "./scripts/script-bkp-bd.sh"
+    destination = "/home/ec2-user/script-bkp-bd.sh"
+  }
+
+  user_data = join("\n\n", [
+    "#!/bin/bash",
+    file("./scripts/instalar_docker_amazon_linux.sh"),
+    "chmod +x /home/ec2-user/script-bkp-bd.sh",
+    "(crontab -l 2>/dev/null; echo '0 2 * * * /home/ec2-user/script-bkp-bd.sh') | crontab -",
+    "while [ ! -f /home/ec2-user/compose.yaml ]; do sleep 2; done",
+    "docker-compose -f /home/ec2-user/compose.yaml up -d"
+  ])
+
+  user_data_replace_on_change = true
+
+  connection {
+    type        = "ssh"
+    user        = "ec2-user"
+    private_key = file("./modules/instances/labsuser.pem")
+    host        = self.public_ip
   }
 
   tags = {

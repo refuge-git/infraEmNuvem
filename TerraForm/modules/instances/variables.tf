@@ -69,3 +69,9 @@ variable "private_key_path" {
   type        = string
 }
 
+variable "mysql_instance_depends_on" {
+  description = "Dependência para garantir que o MySQL esteja pronto antes do backend"
+  type        = any
+  default     = []
+}
+

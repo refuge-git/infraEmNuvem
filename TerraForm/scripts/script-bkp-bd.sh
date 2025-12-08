@@ -6,7 +6,7 @@ DB_PASS="rootpassword"
 DB_NAME="refuge"
 BACKUP_DIR="/home/ec2-user/bkp-banco"
 S3_BUCKET="s3://bd-bkp-refuge"
-EMAIL_ADMIN="fernandes.bia0703@gmail.com"
+EMAIL_ADMIN="refuge.relatorios@gmail.com"
 
 # Criar diretório de backup, caso não exista
 mkdir -p $BACKUP_DIR
