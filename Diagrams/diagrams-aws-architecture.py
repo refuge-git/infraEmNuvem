@@ -25,14 +25,14 @@ with Diagram("Arquitetura Web AWS com ETL de Imagens", show=False, outformat="pn
                 fe1 = EC2("Front-end 1")
             with Cluster("Sub-Rede 2"):
                 be1 = EC2("Back-end 1")
-                db1 = RDS("Banco de Dados 1")
+                db1 = EC2("Banco de Dados 1")
 
         with Cluster("Availability Zone 2"):
             with Cluster("Sub-Rede 3"):
                 fe2 = EC2("Front-end 2")
             with Cluster("Sub-Rede 4"):
                 be2 = EC2("Back-end 2")
-                db2 = RDS("Banco de Dados 2")
+                db2 = EC2("Banco de Dados 2")
 
         # Cliente acessa front-ends via rota
         rt >> [fe1, fe2]
